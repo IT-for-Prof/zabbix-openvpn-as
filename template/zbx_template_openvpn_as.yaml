@@ -1,10 +1,10 @@
 zabbix_export:
   version: '7.0'
   template_groups:
-    - uuid: 36bff6c29af64692839d077febfc7079
+    - uuid: bae99dba58964e82bcc3380fd4599d60
       name: Templates/VPN
   templates:
-    - uuid: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+    - uuid: ee4fb1083594481b8680f4ab3276619f
       template: 'OpenVPN Access Server by External Check'
       name: 'OpenVPN Access Server by External Check'
       description: |
@@ -50,8 +50,7 @@ zabbix_export:
           value: '2000'
           description: 'Web portal response time warning threshold (ms).'
       items:
-        # --- Master item: collects all metrics as JSON ---
-        - uuid: b1000000000000000000000000000001
+        - uuid: 865d32105c414d53aed7343cec760731
           name: 'OpenVPN AS: Collect all metrics'
           type: EXTERNAL
           key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
@@ -63,13 +62,19 @@ zabbix_export:
           tags:
             - tag: component
               value: raw
-        # --- Dependent items ---
-        - uuid: b2000000000000000000000000000001
+          triggers:
+            - uuid: 2e303857e439454a82ccf87e86185874
+              name: 'OpenVPN AS: No data collection'
+              expression: 'nodata(/OpenVPN Access Server by External Check/openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"],5m)=1'
+              priority: AVERAGE
+              description: 'No data received from the external check script for 5 minutes.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 7531124a299a489186d524428caa2a25
           name: 'OpenVPN AS: Active sessions'
           type: DEPENDENT
           key: ovpn.active_sessions
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
@@ -80,21 +85,38 @@ zabbix_export:
               parameters:
                 - '$.active_sessions'
               error_handler: DISCARD_VALUE
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: sessions
-        - uuid: b2000000000000000000000000000002
+          triggers:
+            - uuid: 45e833a548ca4cd181b9efd1d5ff569a
+              name: 'OpenVPN AS: High session count (>{$OVPN_SESSION_WARN})'
+              expression: 'last(/OpenVPN Access Server by External Check/ovpn.active_sessions)>{$OVPN_SESSION_WARN}'
+              priority: WARNING
+              description: 'Active VPN session count exceeds the warning threshold.'
+              tags:
+                - tag: scope
+                  value: capacity
+            - uuid: b89d2aa73c03435aa4f85bad0eea7944
+              name: 'OpenVPN AS: Critical session count (>{$OVPN_SESSION_HIGH})'
+              expression: 'last(/OpenVPN Access Server by External Check/ovpn.active_sessions)>{$OVPN_SESSION_HIGH}'
+              priority: HIGH
+              description: 'Active VPN session count exceeds the high threshold.'
+              tags:
+                - tag: scope
+                  value: capacity
+        - uuid: ce5cc6906c604cbfa3c90d6608cec759
           name: 'OpenVPN AS: Bytes in'
           type: DEPENDENT
           key: ovpn.bytes_in
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
           value_type: UNSIGNED
-          units: B
-          description: 'Total bytes received by VPN server.'
+          units: Bps
+          description: 'Inbound traffic rate (bytes per second).'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -103,21 +125,21 @@ zabbix_export:
             - type: CHANGE_PER_SECOND
               parameters:
                 - ''
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: traffic
-        - uuid: b2000000000000000000000000000003
+        - uuid: 6bf1bc5aa4b14971bfc8254bfe52d12a
           name: 'OpenVPN AS: Bytes out'
           type: DEPENDENT
           key: ovpn.bytes_out
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
           value_type: UNSIGNED
-          units: B
-          description: 'Total bytes sent by VPN server.'
+          units: Bps
+          description: 'Outbound traffic rate (bytes per second).'
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -126,15 +148,15 @@ zabbix_export:
             - type: CHANGE_PER_SECOND
               parameters:
                 - ''
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: traffic
-        - uuid: b2000000000000000000000000000004
+        - uuid: afe09bb16cb94f2893df70e1c0f09618
           name: 'OpenVPN AS: Server version'
           type: DEPENDENT
           key: ovpn.server_version
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: '0'
@@ -148,15 +170,15 @@ zabbix_export:
             - type: DISCARD_UNCHANGED_HEARTBEAT
               parameters:
                 - 6h
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: info
-        - uuid: b2000000000000000000000000000005
+        - uuid: 4b0d2b9a829c4e5184c0ee9efc625f8f
           name: 'OpenVPN AS: XMLRPC ping'
           type: DEPENDENT
           key: ovpn.xmlrpc_ping
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
@@ -167,15 +189,24 @@ zabbix_export:
               parameters:
                 - '$.xmlrpc_ping'
               error_handler: DISCARD_VALUE
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: availability
-        - uuid: b2000000000000000000000000000006
+          triggers:
+            - uuid: 9bf1095efe9a4964ad0ffa1e9acd4060
+              name: 'OpenVPN AS: XMLRPC API is unreachable'
+              expression: 'max(/OpenVPN Access Server by External Check/ovpn.xmlrpc_ping,#3)=0'
+              priority: HIGH
+              description: 'The OpenVPN AS XMLRPC API has not responded for the last 3 checks.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 5f3b26a1e03a4e5fba2dcff31600fdf0
           name: 'OpenVPN AS: Web portal status'
           type: DEPENDENT
           key: ovpn.web_portal_status
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
@@ -186,15 +217,24 @@ zabbix_export:
               parameters:
                 - '$.web_portal_status'
               error_handler: DISCARD_VALUE
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: availability
-        - uuid: b2000000000000000000000000000007
+          triggers:
+            - uuid: 8f4d9585e9354791a9b6589bc76a6039
+              name: 'OpenVPN AS: Web portal is unreachable'
+              expression: 'max(/OpenVPN Access Server by External Check/ovpn.web_portal_status,#3)=0'
+              priority: HIGH
+              description: 'The OpenVPN AS web portal has not responded for the last 3 checks.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: b85151ce2a4e4d31b738a954dceb762f
           name: 'OpenVPN AS: Web portal response time'
           type: DEPENDENT
           key: ovpn.web_portal_response_ms
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
@@ -206,15 +246,24 @@ zabbix_export:
               parameters:
                 - '$.web_portal_response_ms'
               error_handler: DISCARD_VALUE
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: performance
-        - uuid: b2000000000000000000000000000008
+          triggers:
+            - uuid: c6915ba482e747289504c875d5016920
+              name: 'OpenVPN AS: Web portal slow response (>{$OVPN_WEB_RESPONSE_WARN}ms)'
+              expression: 'min(/OpenVPN Access Server by External Check/ovpn.web_portal_response_ms,5m)>{$OVPN_WEB_RESPONSE_WARN}'
+              priority: WARNING
+              description: 'Web portal response time exceeds {$OVPN_WEB_RESPONSE_WARN}ms for 5 minutes.'
+              tags:
+                - tag: scope
+                  value: performance
+        - uuid: d1854081cd13460b942e90d73f66044e
           name: 'OpenVPN AS: LDAP auth test'
           type: DEPENDENT
           key: ovpn.ldap_auth_test
-          master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           delay: '0'
           history: 7d
           trends: 365d
@@ -225,123 +274,71 @@ zabbix_export:
               parameters:
                 - '$.ldap_auth_test'
               error_handler: DISCARD_VALUE
+          master_item:
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
           tags:
             - tag: component
               value: authentication
-      triggers:
-        - uuid: c1000000000000000000000000000001
-          name: 'OpenVPN AS: XMLRPC API is unreachable'
-          expression: 'max(/OpenVPN Access Server by External Check/ovpn.xmlrpc_ping,#3)=0'
-          recovery_expression: 'last(/OpenVPN Access Server by External Check/ovpn.xmlrpc_ping)=1'
-          priority: HIGH
-          description: 'The OpenVPN AS XMLRPC API has not responded for the last 3 checks.'
-          tags:
-            - tag: scope
-              value: availability
-        - uuid: c1000000000000000000000000000002
-          name: 'OpenVPN AS: Web portal is unreachable'
-          expression: 'max(/OpenVPN Access Server by External Check/ovpn.web_portal_status,#3)=0'
-          recovery_expression: 'last(/OpenVPN Access Server by External Check/ovpn.web_portal_status)=1'
-          priority: HIGH
-          description: 'The OpenVPN AS web portal has not responded for the last 3 checks.'
-          tags:
-            - tag: scope
-              value: availability
-        - uuid: c1000000000000000000000000000003
-          name: 'OpenVPN AS: Web portal slow response (>{$OVPN_WEB_RESPONSE_WARN}ms)'
-          expression: 'min(/OpenVPN Access Server by External Check/ovpn.web_portal_response_ms,5m)>{$OVPN_WEB_RESPONSE_WARN}'
-          priority: WARNING
-          description: 'Web portal response time exceeds {$OVPN_WEB_RESPONSE_WARN}ms for 5 minutes.'
-          tags:
-            - tag: scope
-              value: performance
-        - uuid: c1000000000000000000000000000004
-          name: 'OpenVPN AS: LDAP authentication is failing'
-          expression: 'max(/OpenVPN Access Server by External Check/ovpn.ldap_auth_test,#3)=0'
-          recovery_expression: 'last(/OpenVPN Access Server by External Check/ovpn.ldap_auth_test)=1'
-          priority: HIGH
-          description: 'LDAP authentication test has failed for the last 3 checks. Users may be unable to log in.'
-          tags:
-            - tag: scope
-              value: security
-        - uuid: c1000000000000000000000000000005
-          name: 'OpenVPN AS: High session count (>{$OVPN_SESSION_WARN})'
-          expression: 'last(/OpenVPN Access Server by External Check/ovpn.active_sessions)>{$OVPN_SESSION_WARN}'
-          priority: WARNING
-          description: 'Active VPN session count exceeds the warning threshold of {$OVPN_SESSION_WARN}.'
-          tags:
-            - tag: scope
-              value: capacity
-        - uuid: c1000000000000000000000000000006
-          name: 'OpenVPN AS: Critical session count (>{$OVPN_SESSION_HIGH})'
-          expression: 'last(/OpenVPN Access Server by External Check/ovpn.active_sessions)>{$OVPN_SESSION_HIGH}'
-          priority: HIGH
-          description: 'Active VPN session count exceeds the high threshold of {$OVPN_SESSION_HIGH}.'
-          dependencies:
-            - name: 'OpenVPN AS: High session count (>{$OVPN_SESSION_WARN})'
-              expression: 'last(/OpenVPN Access Server by External Check/ovpn.active_sessions)>{$OVPN_SESSION_WARN}'
-          tags:
-            - tag: scope
-              value: capacity
-        - uuid: c1000000000000000000000000000007
-          name: 'OpenVPN AS: No data collection'
-          expression: 'nodata(/OpenVPN Access Server by External Check/ovpn.xmlrpc_ping,5m)=1'
-          priority: AVERAGE
-          description: 'No data has been received from the external check script for 5 minutes. Check script permissions and Zabbix ExternalScripts path.'
-          tags:
-            - tag: scope
-              value: availability
-      graphs:
-        - uuid: d1000000000000000000000000000001
-          name: 'OpenVPN AS: VPN Sessions'
-          type: NORMAL
-          ymin_type_1: FIXED
-          ymin_item_1: '0'
-          graph_items:
-            - sortorder: '0'
-              drawtype: GRADIENT_LINE
-              color: 1A7C11
-              yaxisside: LEFT
-              calc_fnc: AVG
-              item:
-                host: 'OpenVPN Access Server by External Check'
-                key: ovpn.active_sessions
-        - uuid: d1000000000000000000000000000002
-          name: 'OpenVPN AS: Network Traffic'
-          type: NORMAL
-          ymin_type_1: FIXED
-          ymin_item_1: '0'
-          graph_items:
-            - sortorder: '0'
-              drawtype: GRADIENT_LINE
-              color: 1A7C11
-              yaxisside: LEFT
-              calc_fnc: AVG
-              item:
-                host: 'OpenVPN Access Server by External Check'
-                key: ovpn.bytes_in
-            - sortorder: '1'
-              drawtype: GRADIENT_LINE
-              color: F63100
-              yaxisside: LEFT
-              calc_fnc: AVG
-              item:
-                host: 'OpenVPN Access Server by External Check'
-                key: ovpn.bytes_out
-        - uuid: d1000000000000000000000000000003
-          name: 'OpenVPN AS: Web Portal Response Time'
-          type: NORMAL
-          ymin_type_1: FIXED
-          ymin_item_1: '0'
-          graph_items:
-            - sortorder: '0'
-              drawtype: GRADIENT_LINE
-              color: 2774A4
-              yaxisside: LEFT
-              calc_fnc: AVG
-              item:
-                host: 'OpenVPN Access Server by External Check'
-                key: ovpn.web_portal_response_ms
+          triggers:
+            - uuid: 06982fdbed144eac8d0fafa6e759b5e4
+              name: 'OpenVPN AS: LDAP authentication is failing'
+              expression: 'max(/OpenVPN Access Server by External Check/ovpn.ldap_auth_test,#3)=0'
+              priority: HIGH
+              description: 'LDAP authentication test has failed for the last 3 checks. Users may be unable to log in.'
+              tags:
+                - tag: scope
+                  value: security
       tags:
         - tag: application
           value: openvpn-as
+  graphs:
+    - uuid: a8952c38fd23497999f585570115fe59
+      name: 'OpenVPN AS: VPN Sessions'
+      type: NORMAL
+      ymin_type_1: FIXED
+      ymin_item_1: '0'
+      graph_items:
+        - sortorder: '0'
+          drawtype: GRADIENT_LINE
+          color: 1A7C11
+          yaxisside: LEFT
+          calc_fnc: AVG
+          item:
+            host: 'OpenVPN Access Server by External Check'
+            key: ovpn.active_sessions
+    - uuid: 8aa2d8ceed87481bbdf834a969e55e74
+      name: 'OpenVPN AS: Network Traffic'
+      type: NORMAL
+      ymin_type_1: FIXED
+      ymin_item_1: '0'
+      graph_items:
+        - sortorder: '0'
+          drawtype: GRADIENT_LINE
+          color: 1A7C11
+          yaxisside: LEFT
+          calc_fnc: AVG
+          item:
+            host: 'OpenVPN Access Server by External Check'
+            key: ovpn.bytes_in
+        - sortorder: '1'
+          drawtype: GRADIENT_LINE
+          color: F63100
+          yaxisside: LEFT
+          calc_fnc: AVG
+          item:
+            host: 'OpenVPN Access Server by External Check'
+            key: ovpn.bytes_out
+    - uuid: 97766619032546e6b50ea34466e59504
+      name: 'OpenVPN AS: Web Portal Response Time'
+      type: NORMAL
+      ymin_type_1: FIXED
+      ymin_item_1: '0'
+      graph_items:
+        - sortorder: '0'
+          drawtype: GRADIENT_LINE
+          color: 2774A4
+          yaxisside: LEFT
+          calc_fnc: AVG
+          item:
+            host: 'OpenVPN Access Server by External Check'
+            key: ovpn.web_portal_response_ms
