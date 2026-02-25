@@ -1,0 +1,100 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 5aef8f8d8ca24b88ad519d7145d1f25c
+      name: Templates/VPN
+  templates:
+    - uuid: 1a51ad126fd74e1b89c4f197a47c35d4
+      template: 'OpenVPN Access Server by Zabbix agent'
+      name: 'OpenVPN Access Server by Zabbix agent'
+      description: |
+        Companion template for OpenVPN Access Server agent-based monitoring.
+        Covers internal health: process alive, systemd service state, and error log.
+        Link to the same host as "OpenVPN Access Server by External Check" for full coverage.
+
+        Requires Zabbix agent installed on the OpenVPN AS server.
+        The log item requires active agent mode (ServerActive configured in zabbix_agentd.conf).
+      groups:
+        - name: Templates/VPN
+      macros:
+        - macro: '{$OVPN_SERVICE_NAME}'
+          value: 'openvpnas'
+          description: 'systemd service name for OpenVPN Access Server.'
+        - macro: '{$OVPN_LOG_PATH}'
+          value: '/var/log/openvpnas/errors.log'
+          description: 'Path to OpenVPN AS error log file for monitoring.'
+        - macro: '{$OVPN_LOG_REGEXP}'
+          value: 'ERROR|CRITICAL'
+          description: 'Regular expression to match error lines in the log file.'
+      items:
+        - uuid: b976d8f0e370428ea1b7e47e04c96782
+          name: 'OpenVPN AS: Process count'
+          type: ZABBIX_PASSIVE
+          key: 'proc.num[openvpnas]'
+          delay: 1m
+          history: 7d
+          trends: 365d
+          value_type: UNSIGNED
+          description: 'Number of running openvpnas processes. Should be 1 or more when the service is healthy.'
+          tags:
+            - tag: component
+              value: process
+          triggers:
+            - uuid: 4503bbe7dba5413ead2db0e2a3a27a1e
+              name: 'OpenVPN AS: Process is not running'
+              expression: 'max(/OpenVPN Access Server by Zabbix agent/proc.num[openvpnas],#3)=0'
+              priority: DISASTER
+              description: 'No openvpnas process found for the last 3 checks. The service may have crashed.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 9670f0ca69294e61852af15974f60145
+          name: 'OpenVPN AS: Service state'
+          type: ZABBIX_PASSIVE
+          key: 'systemd.unit.info[{$OVPN_SERVICE_NAME},ActiveState]'
+          delay: 1m
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          description: 'systemd ActiveState of the OpenVPN AS service. Expected value: active.'
+          preprocessing:
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 6h
+          tags:
+            - tag: component
+              value: service
+          triggers:
+            - uuid: 0c4487df90624995a782b9b3f5958d53
+              name: 'OpenVPN AS: Service is not active'
+              expression: 'last(/OpenVPN Access Server by Zabbix agent/systemd.unit.info[{$OVPN_SERVICE_NAME},ActiveState])<>"active"'
+              priority: HIGH
+              description: 'The openvpnas systemd service is not in the active state. Current state is reported in the item value.'
+              tags:
+                - tag: scope
+                  value: availability
+        - uuid: 40785b58b4fb4cc9bb34485fbea4d588
+          name: 'OpenVPN AS: Error log'
+          type: ZABBIX_ACTIVE
+          key: 'log[{$OVPN_LOG_PATH},{$OVPN_LOG_REGEXP},,100,skip]'
+          delay: 30s
+          history: 7d
+          trends: '0'
+          value_type: LOG
+          description: 'Monitors the OpenVPN AS error log for lines matching {$OVPN_LOG_REGEXP}. Requires active agent mode.'
+          tags:
+            - tag: component
+              value: log
+          triggers:
+            - uuid: 1d48df26555e443b8126f63f410aebb5
+              name: 'OpenVPN AS: Error found in log'
+              expression: 'length(last(/OpenVPN Access Server by Zabbix agent/log[{$OVPN_LOG_PATH},{$OVPN_LOG_REGEXP},,100,skip]))>0'
+              priority: WARNING
+              manual_close: 'YES'
+              description: 'A line matching {$OVPN_LOG_REGEXP} was found in the OpenVPN AS error log. Check the log item value for details.'
+              tags:
+                - tag: scope
+                  value: notice
+      tags:
+        - tag: application
+          value: openvpn-as

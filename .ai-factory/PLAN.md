@@ -35,6 +35,12 @@ Refined: 2026-02-25
 - [x] Task #14: Write README.md (depends on #9, #10, #12)
 <!-- Commit checkpoint: tasks #12, #13, #14 -->
 
+### Phase 3: Zabbix Agent Companion Template
+
+- [x] Task #15: Create Zabbix agent template for process, service, and log monitoring
+- [x] Task #16: Update README.md with agent template section (depends on #15)
+<!-- Commit checkpoint: tasks #15, #16 -->
+
 ---
 
 ## Task Details
@@ -160,3 +166,31 @@ pytest with `unittest.mock`. 14 test cases for client, 5 for check script. Key t
 **File:** `README.md`
 
 Sections: Overview, Features, Requirements, Installation, Configuration (macro table), LDAP Auth Test Setup, Metrics Reference, Triggers Reference, Manual Testing, Troubleshooting, Architecture (master+dependent pattern), License (MIT).
+
+---
+
+### Task #15: Create Zabbix agent template
+
+**File:** `template/zbx_template_openvpn_as_agent.yaml`
+
+Companion template `OpenVPN Access Server by Zabbix agent` in group `Templates/VPN`. Link to same host as the External Check template for full coverage.
+
+**Macros:** `{$OVPN_SERVICE_NAME}` (openvpnas), `{$OVPN_LOG_PATH}` (/var/log/openvpnas/errors.log), `{$OVPN_LOG_REGEXP}` (ERROR|CRITICAL)
+
+**Items:**
+- `proc.num[openvpnas]` — ZABBIX_PASSIVE, UNSIGNED, 1m
+- `systemd.unit.info[{$OVPN_SERVICE_NAME},ActiveState]` — ZABBIX_PASSIVE, CHAR, 1m
+- `log[{$OVPN_LOG_PATH},{$OVPN_LOG_REGEXP},,100,skip]` — ZABBIX_ACTIVE, LOG, delay 0
+
+**Triggers (inside each item):**
+- Process not running (proc.num=0 for #3) → DISASTER
+- Service not active (ActiveState≠"active") → HIGH
+- Error in log → WARNING, recovery_mode: NONE
+
+---
+
+### Task #16: Update README.md with agent template section
+
+**File:** `README.md`
+
+Add "Agent Template" section after "Architecture". Include: overview of hybrid approach, installation (ServerActive in agent conf), macros table, triggers table. Update Features list to mention process/service/log monitoring.

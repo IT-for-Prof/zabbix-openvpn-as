@@ -6,20 +6,27 @@ Uses an efficient **master item + dependent items** architecture — a single sc
 
 ## Features
 
+**External Check template** (`zbx_template_openvpn_as.yaml`):
 - Active VPN session count
 - Network traffic (bytes in/out with rate calculation)
 - Server version tracking
 - XMLRPC API availability check
-- Web portal reachability and response time
+- Web portal reachability and response time (client-facing port 443)
 - LDAP authentication health test (optional)
 - 7 pre-configured triggers with customizable thresholds
 - 3 built-in graphs
+
+**Agent template** (`zbx_template_openvpn_as_agent.yaml`):
+- OpenVPN AS process alive check
+- systemd service state monitoring
+- Error log monitoring with configurable regexp
 
 ## Requirements
 
 - **Python** 3.6+ (stdlib only — no external dependencies)
 - **Zabbix Server/Proxy** 7.0+
 - **OpenVPN Access Server** with XMLRPC API enabled (port 943)
+- **Zabbix Agent** 6.0+ on the OpenVPN AS server *(agent template only)*
 
 ## Installation
 
@@ -68,6 +75,7 @@ Set these macros on the host after linking the template:
 | `{$OVPN_TIMEOUT}` | `10` | No | Script timeout (seconds) |
 | `{$OVPN_AUTH_TEST_USER}` | *(empty)* | No | LDAP auth test username |
 | `{$OVPN_AUTH_TEST_PASSWORD}` | *(secret)* | No | LDAP auth test password |
+| `{$OVPN_WEB_PORT}` | `443` | No | Web portal port (client-facing, separate from XMLRPC port 943) |
 | `{$OVPN_SESSION_WARN}` | `100` | No | Session count warning threshold |
 | `{$OVPN_SESSION_HIGH}` | `200` | No | Session count high threshold |
 | `{$OVPN_WEB_RESPONSE_WARN}` | `2000` | No | Web response time warning (ms) |
@@ -114,14 +122,14 @@ When `{$OVPN_AUTH_TEST_USER}` is empty, the LDAP test is skipped.
 Test the script directly from command line:
 
 ```bash
-# Basic test (no LDAP auth check)
+# Basic test (no LDAP auth check, web portal on port 443)
 python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py 192.168.1.1 943 admin password
 
 # With LDAP auth test
 python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py 192.168.1.1 943 admin password testuser testpass 0
 
-# With SSL verification
-python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py vpn.example.com 943 admin password "" "" 1
+# With SSL verification and custom web port
+python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py vpn.example.com 943 admin password "" "" 1 443
 
 # With verbose logging
 LOG_LEVEL=DEBUG python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py 192.168.1.1 943 admin password
@@ -181,6 +189,50 @@ Zabbix Server/Proxy
 ```
 
 One script invocation per polling cycle. All dependent items are processed in-memory by Zabbix preprocessing — no additional external processes.
+
+## Agent Template
+
+`template/zbx_template_openvpn_as_agent.yaml` is a companion template that monitors OpenVPN AS from inside the server using a Zabbix agent. Link both templates to the same host for full coverage.
+
+| Template | Perspective | What it checks |
+|----------|-------------|----------------|
+| External Check | Outside | XMLRPC reachability, web portal, LDAP auth, sessions, bandwidth |
+| Zabbix agent | Inside | Process alive, systemd service state, error log |
+
+The two templates cover different failure modes. The XMLRPC API can appear healthy while the underlying process has crashed, or the process can be running while a firewall blocks external access.
+
+### Agent Template Installation
+
+1. Install Zabbix agent on the OpenVPN AS server
+2. Import `template/zbx_template_openvpn_as_agent.yaml` into Zabbix
+3. Link `OpenVPN Access Server by Zabbix agent` to the same host as the External Check template
+
+The `log` item requires **active agent mode** (agent connects to Zabbix server). Add to `zabbix_agentd.conf`:
+
+```ini
+ServerActive=<zabbix-server-ip>
+Hostname=<host-name-matching-zabbix>
+```
+
+No `UserParameter` configuration is needed — all items use built-in agent keys.
+
+### Agent Template Macros
+
+| Macro | Default | Description |
+|-------|---------|-------------|
+| `{$OVPN_SERVICE_NAME}` | `openvpnas` | systemd service name |
+| `{$OVPN_LOG_PATH}` | `/var/log/openvpnas/errors.log` | Path to error log file |
+| `{$OVPN_LOG_REGEXP}` | `ERROR\|CRITICAL` | Regexp filter for log trigger |
+
+### Agent Template Triggers
+
+| Trigger | Severity | Condition |
+|---------|----------|-----------|
+| Process is not running | Disaster | `proc.num = 0` for last 3 checks |
+| Service is not active | High | `ActiveState ≠ "active"` |
+| Error found in log | Warning | Matching line found in error log |
+
+The log trigger has **manual close** enabled — acknowledge it in Zabbix after reviewing the log entry.
 
 ## License
 
