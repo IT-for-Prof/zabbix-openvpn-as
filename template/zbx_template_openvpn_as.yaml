@@ -1,7 +1,7 @@
 zabbix_export:
   version: '7.0'
   template_groups:
-    - uuid: bae99dba58964e82bcc3380fd4599d60
+    - uuid: 5aef8f8d8ca24b88ad519d7145d1f25c
       name: Templates/VPN
   templates:
     - uuid: ee4fb1083594481b8680f4ab3276619f
@@ -46,6 +46,9 @@ zabbix_export:
         - macro: '{$OVPN_SESSION_HIGH}'
           value: '200'
           description: 'VPN session count high/critical threshold.'
+        - macro: '{$OVPN_WEB_PORT}'
+          value: '443'
+          description: 'Web portal port for client-facing connections (VPN client downloads, user web portal).'
         - macro: '{$OVPN_WEB_RESPONSE_WARN}'
           value: '2000'
           description: 'Web portal response time warning threshold (ms).'
@@ -53,7 +56,7 @@ zabbix_export:
         - uuid: 865d32105c414d53aed7343cec760731
           name: 'OpenVPN AS: Collect all metrics'
           type: EXTERNAL
-          key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+          key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           delay: 1m
           history: 1h
           trends: '0'
@@ -65,7 +68,7 @@ zabbix_export:
           triggers:
             - uuid: 2e303857e439454a82ccf87e86185874
               name: 'OpenVPN AS: No data collection'
-              expression: 'nodata(/OpenVPN Access Server by External Check/openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"],5m)=1'
+              expression: 'nodata(/OpenVPN Access Server by External Check/openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"],5m)=1'
               priority: AVERAGE
               description: 'No data received from the external check script for 5 minutes.'
               tags:
@@ -86,7 +89,7 @@ zabbix_export:
                 - '$.active_sessions'
               error_handler: DISCARD_VALUE
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: sessions
@@ -126,7 +129,7 @@ zabbix_export:
               parameters:
                 - ''
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: traffic
@@ -149,7 +152,7 @@ zabbix_export:
               parameters:
                 - ''
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: traffic
@@ -171,7 +174,7 @@ zabbix_export:
               parameters:
                 - 6h
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: info
@@ -190,7 +193,7 @@ zabbix_export:
                 - '$.xmlrpc_ping'
               error_handler: DISCARD_VALUE
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: availability
@@ -218,7 +221,7 @@ zabbix_export:
                 - '$.web_portal_status'
               error_handler: DISCARD_VALUE
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: availability
@@ -247,7 +250,7 @@ zabbix_export:
                 - '$.web_portal_response_ms'
               error_handler: DISCARD_VALUE
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: performance
@@ -275,7 +278,7 @@ zabbix_export:
                 - '$.ldap_auth_test'
               error_handler: DISCARD_VALUE
           master_item:
-            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]'
+            key: 'openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]'
           tags:
             - tag: component
               value: authentication

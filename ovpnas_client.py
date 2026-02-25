@@ -43,14 +43,16 @@ class OpenVPNASClient:
         host: OpenVPN AS hostname or IP address.
         username: API username.
         password: API password.
-        port: XMLRPC/web port (default: 943).
+        port: XMLRPC admin port (default: 943).
+        web_port: Web portal port for client-facing connections (default: 443).
         verify_ssl: Whether to verify SSL certificates (default: True).
         timeout: Timeout in seconds for network operations (default: 10).
     """
 
-    def __init__(self, host, username, password, port=943, verify_ssl=True, timeout=10):
+    def __init__(self, host, username, password, port=943, web_port=443, verify_ssl=True, timeout=10):
         self._host = host
         self._port = port
+        self._web_port = web_port
         self._username = username
         self._password = password
         self._timeout = timeout
@@ -72,8 +74,8 @@ class OpenVPNASClient:
         self._proxy = xmlrpc.client.ServerProxy(url, transport=transport)
 
         logger.debug(
-            "[OpenVPNASClient.__init__] Client created {host: %s, port: %s}",
-            host, port,
+            "[OpenVPNASClient.__init__] Client created {host: %s, port: %s, web_port: %s}",
+            host, port, web_port,
         )
 
     def _call(self, method_name, *args):
@@ -250,7 +252,7 @@ class OpenVPNASClient:
         if timeout is None:
             timeout = self._timeout
 
-        url = "https://{}:{}/".format(self._host, self._port)
+        url = "https://{}:{}/".format(self._host, self._web_port)
         logger.debug(
             "[OpenVPNASClient.check_web_portal] Checking %s {timeout: %s}", url, timeout,
         )

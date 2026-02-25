@@ -6,10 +6,10 @@ a single JSON blob to stdout for Zabbix master item consumption.
 Dependent items extract individual values via JSONPath preprocessing.
 
 Usage (positional args for Zabbix External Check compatibility):
-    openvpn_as_check.py HOST PORT USERNAME PASSWORD [AUTH_TEST_USER] [AUTH_TEST_PASSWORD] [VERIFY_SSL]
+    openvpn_as_check.py HOST PORT USERNAME PASSWORD [AUTH_TEST_USER] [AUTH_TEST_PASSWORD] [VERIFY_SSL] [WEB_PORT]
 
 Zabbix item key example:
-    openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}"]
+    openvpn_as_check.py["{$OVPN_HOST}","{$OVPN_PORT}","{$OVPN_USER}","{$OVPN_PASSWORD}","{$OVPN_AUTH_TEST_USER}","{$OVPN_AUTH_TEST_PASSWORD}","{$OVPN_VERIFY_SSL}","{$OVPN_WEB_PORT}"]
 """
 
 import json
@@ -69,7 +69,7 @@ def main():
 
     if len(args) < 4:
         print("ZBX_NOTSUPPORTED: Usage: openvpn_as_check.py HOST PORT USERNAME PASSWORD "
-              "[AUTH_TEST_USER] [AUTH_TEST_PASSWORD] [VERIFY_SSL]")
+              "[AUTH_TEST_USER] [AUTH_TEST_PASSWORD] [VERIFY_SSL] [WEB_PORT]")
         sys.exit(1)
 
     host = args[0]
@@ -84,11 +84,17 @@ def main():
     auth_test_password = args[5] if len(args) > 5 else ""
     verify_ssl_str = args[6] if len(args) > 6 else "0"
     verify_ssl = verify_ssl_str in ("1", "true", "True", "yes")
+    web_port_str = args[7] if len(args) > 7 else "443"
+    try:
+        web_port = int(web_port_str)
+    except ValueError:
+        print("ZBX_NOTSUPPORTED: WEB_PORT must be an integer, got: {}".format(web_port_str))
+        sys.exit(1)
 
     logger.debug(
-        "[openvpn_as_check] Starting {host: %s, port: %d, user: %s, "
+        "[openvpn_as_check] Starting {host: %s, port: %d, web_port: %d, user: %s, "
         "pass: %s, auth_test_user: %s, verify_ssl: %s}",
-        host, port, username, mask_password(password),
+        host, port, web_port, username, mask_password(password),
         auth_test_user or "(none)", verify_ssl,
     )
 
@@ -98,6 +104,7 @@ def main():
             username=username,
             password=password,
             port=port,
+            web_port=web_port,
             verify_ssl=verify_ssl,
         )
     except Exception as exc:
