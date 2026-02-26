@@ -47,6 +47,7 @@ Set all macros including `{$OVPN_HOST}`, `{$OVPN_PASSWORD}`. See [Configuration]
 - XMLRPC API and web portal availability
 - LDAP authentication health test (optional)
 - 7 triggers · 3 graphs
+- ⚠️ Not tested against a live server — based on public XMLRPC API docs
 
 **Agent template** — monitors from inside the server:
 - Process alive check (`proc.num`)

@@ -14,6 +14,8 @@
 
 > **Web login monitoring requires no scripts.** If XMLRPC (port 943) is not available, skip step 1 and disable the master item `OpenVPN AS: Collect all metrics` on the host after linking the template.
 
+> **Note:** The XMLRPC external check script (`openvpn_as_check.py`) has not been tested against a live OpenVPN AS instance. The web login scenario has been tested and verified. If you use the XMLRPC path, please report any issues.
+
 ## 1. Copy scripts to ExternalScripts directory *(XMLRPC metrics only)*
 
 The external check script must be on the machine that runs the check — Zabbix Server or Zabbix Proxy.

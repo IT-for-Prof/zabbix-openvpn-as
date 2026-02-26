@@ -54,6 +54,8 @@ not running (AVG)
 ## External Check Template Metrics
 
 > Requires `openvpn_as_check.py` on the Zabbix Server/Proxy and port 943 reachable. If XMLRPC is not available, disable the master item `OpenVPN AS: Collect all metrics` on the host — the web scenario runs independently.
+>
+> **Note:** The XMLRPC metrics path has not been tested against a live OpenVPN AS instance. The code is based on the public XMLRPC API documentation. Please report any issues.
 
 | Metric | Item key | Type | Description |
 |--------|----------|------|-------------|
