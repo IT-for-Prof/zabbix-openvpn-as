@@ -40,7 +40,7 @@ The web login test (`{$OVPN_AUTH_TEST_USER}` / `{$OVPN_AUTH_TEST_PASSWORD}`) dri
 
 **Setup steps:**
 
-1. Create a dedicated monitoring user in OpenVPN AS (local account or LDAP — both work)
+1. Create a dedicated monitoring user in OpenVPN AS
 2. Ensure the account has a **non-expiring password**
 3. Check that the account is **exempt from lockout policy** or has a high lockout threshold — the scenario authenticates every 5 minutes
 4. Set `{$OVPN_AUTH_TEST_USER}` and `{$OVPN_AUTH_TEST_PASSWORD}` on the Zabbix host (use `SECRET_TEXT` type for the password)
@@ -49,15 +49,6 @@ The web login test (`{$OVPN_AUTH_TEST_USER}` / `{$OVPN_AUTH_TEST_PASSWORD}`) dri
 - Portal unreachable (step 1 fails)
 - Disabled or locked-out account (step 2 returns HTTP 403)
 - Wrong password (step 2 returns HTTP 403)
-- Auth backend (LDAP/AD) down — if the user authenticates via LDAP, LDAP failure causes step 2 to fail
-
-> For pure LDAP auth pipeline testing, use a user that has **no local account in OpenVPN AS** — it must authenticate via LDAP only. A local account bypasses LDAP and will succeed even when LDAP is down.
-
-## LDAP Auth Test via XMLRPC (optional)
-
-When using the external check script (`{$OVPN_AUTH_TEST_USER}` is set and XMLRPC is available), the script also tests auth by opening a second XMLRPC connection with the test credentials. This result is stored in `ovpn.ldap_auth_test`.
-
-This test is complementary to the web scenario — it validates the XMLRPC auth path specifically, while the web scenario validates the web portal auth path.
 
 ## Agent Template Macros
 
