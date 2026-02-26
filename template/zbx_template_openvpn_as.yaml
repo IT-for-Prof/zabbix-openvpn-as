@@ -7,10 +7,16 @@ zabbix_export:
     - uuid: ee4fb1083594481b8680f4ab3276619f
       template: 'OpenVPN Access Server by External Check'
       name: 'OpenVPN Access Server by External Check'
+      vendor:
+        name: 'itforprof.com'
+        version: '1.0'
       description: |
         Monitors OpenVPN Access Server via web portal checks.
         Uses a Zabbix web scenario to test LDAP authentication end-to-end.
         Collects web portal availability, response time, and LDAP login status.
+
+        Author: Konstantin Tyutyunnik
+        Site:   https://itforprof.com
       groups:
         - name: Templates/VPN
       macros:

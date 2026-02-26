@@ -71,6 +71,10 @@ Set all macros including `{$OVPN_HOST}`, `{$OVPN_PASSWORD}`. See [Configuration]
 - Python 3.6+ stdlib — *only for XMLRPC metrics collection*
 - Port 943 reachable from Zabbix Server/Proxy — *only for XMLRPC metrics collection*
 
+## Author
+
+**Konstantin Tyutyunnik** — [itforprof.com](https://itforprof.com)
+
 ## License
 
 MIT

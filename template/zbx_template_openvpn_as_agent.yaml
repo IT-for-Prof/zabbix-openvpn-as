@@ -7,6 +7,9 @@ zabbix_export:
     - uuid: 1a51ad126fd74e1b89c4f197a47c35d4
       template: 'OpenVPN Access Server by Zabbix agent'
       name: 'OpenVPN Access Server by Zabbix agent'
+      vendor:
+        name: 'itforprof.com'
+        version: '1.0'
       description: |
         Companion template for OpenVPN Access Server agent-based monitoring.
         Covers internal health: process alive, systemd service state, and error log.
@@ -14,6 +17,9 @@ zabbix_export:
 
         Requires Zabbix agent installed on the OpenVPN AS server.
         The log item requires active agent mode (ServerActive configured in zabbix_agentd.conf).
+
+        Author: Konstantin Tyutyunnik
+        Site:   https://itforprof.com
       groups:
         - name: Templates/VPN
       macros:
