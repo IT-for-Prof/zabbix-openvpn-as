@@ -8,9 +8,9 @@ zabbix_export:
       template: 'OpenVPN Access Server by External Check'
       name: 'OpenVPN Access Server by External Check'
       description: |
-        Monitors OpenVPN Access Server via XMLRPC API.
-        Uses master item + dependent items pattern for efficient polling.
-        Collects VPN sessions, bandwidth, web portal health, and LDAP auth status.
+        Monitors OpenVPN Access Server via web portal checks.
+        Uses a Zabbix web scenario to test LDAP authentication end-to-end.
+        Collects web portal availability, response time, and LDAP login status.
       groups:
         - name: Templates/VPN
       macros:
@@ -60,8 +60,9 @@ zabbix_export:
           delay: 1m
           history: 1h
           trends: '0'
+          status: DISABLED
           value_type: TEXT
-          description: 'Master item. Calls openvpn_as_check.py once and stores full JSON with all metrics.'
+          description: 'Master item. Calls openvpn_as_check.py once and stores full JSON with all metrics. Disabled by default — enable when openvpn_as_check.py is deployed and port 943 is reachable from Zabbix Server/Proxy.'
           tags:
             - tag: component
               value: raw
@@ -294,6 +295,78 @@ zabbix_export:
       tags:
         - tag: application
           value: openvpn-as
+      httptests:
+        - uuid: 3fa2b1c4d5e64f7a8b9c0d1e2f3a4b5c
+          name: 'OpenVPN AS: LDAP login test'
+          delay: 5m
+          agent: Zabbix
+          verify_host: 'NO'
+          verify_peer: 'NO'
+          steps:
+            - name: 'Load portal'
+              url: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/'
+              follow_redirects: 'YES'
+              retrieve_mode: BODY
+              timeout: '15'
+              status_codes: '200'
+              required: 'OpenVPN CWS'
+            - name: 'Authenticate LDAP user'
+              url: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/__auth__'
+              posts: 'username={$OVPN_AUTH_TEST_USER}&password={$OVPN_AUTH_TEST_PASSWORD}'
+              headers:
+                - name: 'X-OpenVPN'
+                  value: '1'
+                - name: 'X-CWS-Proto-Ver'
+                  value: '2'
+                - name: 'Referer'
+                  value: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/'
+              timeout: '15'
+              status_codes: '200'
+  triggers:
+    - uuid: b689ee16d10444ffac41aa7dcb7742e9
+      name: 'OpenVPN AS: Web login test not running'
+      expression: 'nodata(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test],15m)=1'
+      priority: AVERAGE
+      description: 'No data from the web login scenario for 15 minutes. Zabbix may have lost connectivity to the portal or the scenario is misconfigured.'
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: a871f3aee8cd457b88530288cca5d2be
+      name: 'OpenVPN AS: Web login test failed'
+      expression: 'min(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test],#2)>0'
+      priority: HIGH
+      description: 'Web login scenario failed on step {ITEM.LASTVALUE}. Check the Last error message item for details. A disabled or locked-out user account will cause step 2 to return HTTP 403.'
+      dependencies:
+        - name: 'OpenVPN AS: Web login test not running'
+          expression: 'nodata(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test],15m)=1'
+          recovery_expression: ''
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: 8429973f0f6345aa841ab9dd2248b163
+      name: 'OpenVPN AS: Web login test error'
+      expression: 'length(last(/OpenVPN Access Server by External Check/web.test.error[OpenVPN AS: LDAP login test]))>0 and last(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test])>0'
+      priority: HIGH
+      description: 'Web login scenario reported an error. Check the Last error message item value for the exact failure reason.'
+      dependencies:
+        - name: 'OpenVPN AS: Web login test failed'
+          expression: 'min(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test],#2)>0'
+          recovery_expression: ''
+      tags:
+        - tag: scope
+          value: availability
+    - uuid: 28276439d66c43c6a6a13763da7ab29d
+      name: 'OpenVPN AS: Web login slow response (>5s)'
+      expression: 'min(/OpenVPN Access Server by External Check/web.test.time[OpenVPN AS: LDAP login test,Authenticate LDAP user,resp],5m)>5'
+      priority: WARNING
+      description: 'Authentication step takes over 5 seconds for 5 minutes. OpenVPN AS may be under load or the auth backend (LDAP/AD) is slow.'
+      dependencies:
+        - name: 'OpenVPN AS: Web login test not running'
+          expression: 'nodata(/OpenVPN Access Server by External Check/web.test.fail[OpenVPN AS: LDAP login test],15m)=1'
+          recovery_expression: ''
+      tags:
+        - tag: scope
+          value: performance
   graphs:
     - uuid: a8952c38fd23497999f585570115fe59
       name: 'OpenVPN AS: VPN Sessions'
