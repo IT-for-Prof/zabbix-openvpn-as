@@ -8,10 +8,10 @@ The web scenario runs every **5 minutes** from the Zabbix Server. It performs tw
 
 | Step | Method | URL | Check |
 |------|--------|-----|-------|
-| Load portal | GET | `https://{HOST.CONN}:{$OVPN_WEB_PORT}/` | HTTP 200 + body contains `OpenVPN CWS` |
-| Authenticate LDAP user | POST | `https://{HOST.CONN}:{$OVPN_WEB_PORT}/__auth__` | HTTP 200 (failure returns 403) |
+| Load portal | GET | `https://{HOST.CONN}:{$OVPN_WEB_PORT}/` | HTTP 200 + body matches `OpenVPN CWS` (legacy) or `/static/standalone/` (modern SPA) |
+| Authenticate LDAP user | GET | `https://{HOST.CONN}:{$OVPN_WEB_PORT}/rest/GetUserlogin` | HTTP 200 (failure returns 403) |
 
-Step 2 sends `username` and `password` as form data with headers `X-OpenVPN: 1`, `X-CWS-Proto-Ver: 2`, and `Referer`. Zabbix handles the session cookie (`openvpn_sess_*`) automatically between steps.
+Step 2 authenticates the test user against the OVPN-AS **client REST API** (`/rest/GetUserlogin`) using HTTP **Basic auth**, configured at the scenario level (`http_user`/`http_password` = `{$OVPN_AUTH_TEST_USER}`/`{$OVPN_AUTH_TEST_PASSWORD}`). A valid login returns the user-locked profile (HTTP 200). This replaces the legacy form `POST /__auth__`, which the modern SPA portal (OVPN-AS 2.11+) rejects with HTTP 405.
 
 **How failures surface:** a failed login returns HTTP 403, which does not match `status_codes: 200` → step fails → `web.test.fail` becomes non-zero → trigger fires.
 

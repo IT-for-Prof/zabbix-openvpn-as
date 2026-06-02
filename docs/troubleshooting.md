@@ -109,29 +109,23 @@ LOG_LEVEL=DEBUG python3 /usr/lib/zabbix/externalscripts/openvpn_as_check.py \
 - Check the scenario is enabled: **Data collection → Hosts → Web** — status must be green
 - Check Zabbix Server can reach `https://{HOST.CONN}:{$OVPN_WEB_PORT}/` from its network
 
-### Step 2 returns HTTP 403
+### Step 2 returns HTTP 403 (or 401)
 
-The authentication failed. Possible causes:
-- Test user account is disabled in OpenVPN AS
-- Test user account is locked out
-- Wrong password in `{$OVPN_AUTH_TEST_PASSWORD}`
-- LDAP/AD is unreachable (if the test user authenticates via LDAP)
+Authentication failed. The auth step does `GET /rest/GetUserlogin` with HTTP Basic auth.
+- **403** (`AUTH_FAILED` / `Access denied`) — credentials reached the server but were rejected:
+  - Test user account is disabled or locked out in OpenVPN AS
+  - Wrong password in `{$OVPN_AUTH_TEST_PASSWORD}`
+  - LDAP/AD is unreachable (if the test user authenticates via LDAP)
+  - **OTP/MFA (TOTP) is enabled for the test user** — `/rest/GetUserlogin` then returns an auth challenge a Basic-auth step can't answer. Exempt the test account: `sacli --user <USER> --key prop_google_auth --value false UserPropPut && sacli start` (use the exact LDAP username).
+- **401** (`Need Credentials`) — no usable credentials reached the server, almost always an **empty `{$OVPN_AUTH_TEST_PASSWORD}` secret macro**. Editing a host's macros and clicking *Set new value* (or changing the macro type) erases a secret value — re-enter it.
 
-Verify manually:
+Verify manually (replace USERNAME and PASSWORD):
 ```bash
-# Step 1 — get session cookie
-curl -sk -c /tmp/vpn_test.txt -L https://vpn.example.com/ -o /dev/null
-
-# Step 2 — attempt login (replace USERNAME and PASSWORD)
-curl -sk -b /tmp/vpn_test.txt \
-  -X POST "https://vpn.example.com/__auth__" \
-  -H "X-OpenVPN: 1" -H "X-CWS-Proto-Ver: 2" \
-  -H "Referer: https://vpn.example.com/" \
-  -d "username=USERNAME&password=PASSWORD" \
-  -w "\nHTTP: %{http_code}\n"
+curl -sk -u "USERNAME:PASSWORD" "https://vpn.example.com/rest/GetUserlogin" \
+  -o /dev/null -w "HTTP: %{http_code}\n"
 ```
 
-Expected on success: HTTP 200. On failure: HTTP 403 + `{"type": "login-failure", ...}`.
+Expected: **200** = login OK (returns the user-locked profile). **403** = bad/locked/MFA account. **401** = no credentials sent.
 
 ### `web.test.error` shows old error after recovery
 
