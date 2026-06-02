@@ -36,7 +36,7 @@ This matters when the Zabbix Server/Proxy is outside the network: port 943 is ty
 
 ## Web Login Test Setup
 
-The web login test (`{$OVPN_AUTH_TEST_USER}` / `{$OVPN_AUTH_TEST_PASSWORD}`) drives the Zabbix web scenario. It runs every 5 minutes, loads the portal, and authenticates via `POST /__auth__`.
+The web login test (`{$OVPN_AUTH_TEST_USER}` / `{$OVPN_AUTH_TEST_PASSWORD}`) drives the Zabbix web scenario. It runs every 5 minutes, loads the portal, and authenticates via `GET /rest/GetUserlogin` using HTTP Basic auth (set at the scenario level).
 
 **Setup steps:**
 

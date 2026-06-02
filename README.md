@@ -3,7 +3,7 @@
 > Zabbix 7.0 template for monitoring OpenVPN Access Server.
 
 Two monitoring approaches in one template set:
-- **Web login test** — Zabbix web scenario that loads the portal and authenticates a test user via `POST /__auth__`. No scripts required. Detects disabled accounts, auth backend failures, and portal outages.
+- **Web login test** — Zabbix web scenario that loads the portal and authenticates a test user via the client REST API (`GET /rest/GetUserlogin`, HTTP Basic auth). No scripts required. Detects disabled accounts, auth backend failures, and portal outages.
 - **XMLRPC metrics** — external check script collecting sessions, bandwidth, and server info via the admin API on port 943. Optional — requires port 943 reachable from Zabbix Server/Proxy.
 
 ## Quick Start
@@ -36,8 +36,8 @@ Set all macros including `{$OVPN_HOST}`, `{$OVPN_PASSWORD}`. See [Configuration]
 **External Check template** — two independent monitoring layers:
 
 *Web login scenario (no scripts — runs on Zabbix Server):*
-- Loads portal, follows redirects, verifies `OpenVPN CWS` page content
-- Authenticates test user via `POST /__auth__` — detects disabled/locked accounts within 5 min
+- Loads portal, follows redirects, verifies portal markup — legacy `OpenVPN CWS` page **or** modern SPA asset path `/static/standalone/` (matches both OVPN-AS eras)
+- Authenticates test user via `GET /rest/GetUserlogin` (client REST API, HTTP Basic auth) — detects disabled/locked accounts within 5 min
 - Response time tracking per step
 - 4 triggers with dependency chain · detection time ≤ 5 min
 

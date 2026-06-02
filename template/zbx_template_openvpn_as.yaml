@@ -308,6 +308,12 @@ zabbix_export:
           agent: Zabbix
           verify_host: 'NO'
           verify_peer: 'NO'
+          # Step 2 authenticates the test user against the OVPN-AS client REST API
+          # (/rest/GetUserlogin) using HTTP Basic auth. Replaces the legacy form POST
+          # to /__auth__, which the modern SPA portal (2.11+) rejects with HTTP 405.
+          authentication: BASIC
+          http_user: '{$OVPN_AUTH_TEST_USER}'
+          http_password: '{$OVPN_AUTH_TEST_PASSWORD}'
           steps:
             - name: 'Load portal'
               url: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/'
@@ -315,17 +321,16 @@ zabbix_export:
               retrieve_mode: BODY
               timeout: '15'
               status_codes: '200'
-              required: 'OpenVPN CWS'
+              # Matches both the modern OVPN-AS React portal (2.11+, '/static/standalone/'
+              # asset path) and the legacy CWS markup ('OpenVPN CWS'). Either era passes.
+              required: 'OpenVPN CWS|/static/standalone/'
+            # GET the user-locked profile via the client REST API. Basic auth (set at the
+            # scenario level) carries the test user's credentials. 200 = login OK;
+            # 403 (AUTH_FAILED) = bad/disabled/locked account, which fails the step.
             - name: 'Authenticate LDAP user'
-              url: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/__auth__'
-              posts: 'username={$OVPN_AUTH_TEST_USER}&password={$OVPN_AUTH_TEST_PASSWORD}'
-              headers:
-                - name: 'X-OpenVPN'
-                  value: '1'
-                - name: 'X-CWS-Proto-Ver'
-                  value: '2'
-                - name: 'Referer'
-                  value: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/'
+              url: 'https://{HOST.CONN}:{$OVPN_WEB_PORT}/rest/GetUserlogin'
+              follow_redirects: 'YES'
+              retrieve_mode: BODY
               timeout: '15'
               status_codes: '200'
   triggers:
